@@ -2,6 +2,7 @@ import { knex } from '../database'
 import { z } from 'zod'
 import { FastifyInstance } from 'fastify'
 import { randomUUID } from 'node:crypto'
+import { checkSessionId } from '../middlewares/check-session-id'
 
 const createUserBodySchema = z.object({
   name: z.string(),
