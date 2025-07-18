@@ -237,4 +237,74 @@ describe('Meals routes', () => {
 
     expect(listSecondUserMealsResponse.body.meals).toEqual([])
   })
+
+  it('should be able to get metrics from a user', async () => {
+    const createUserResponse = await request(app.server)
+      .post('/users')
+      .send({
+        name: 'John Doe',
+        email: 'johndoe@example.com',
+      })
+      .expect(201)
+
+    const cookie = createUserResponse.get('Set-Cookie')!
+
+    await request(app.server)
+      .post('/meals')
+      .set('Cookie', cookie)
+      .send({
+        name: 'Café da manhã',
+        description: 'Ovos e frutas',
+        date: new Date().toISOString(),
+        isOnDiet: true,
+      })
+      .expect(201)
+
+    await request(app.server)
+      .post('/meals')
+      .set('Cookie', cookie)
+      .send({
+        name: 'Almoço',
+        description: 'Hambúrguer e batata frita',
+        date: new Date().toISOString(),
+        isOnDiet: false,
+      })
+      .expect(201)
+
+    await request(app.server)
+      .post('/meals')
+      .set('Cookie', cookie)
+      .send({
+        name: 'Janta',
+        description: 'Salada de frutas',
+        date: new Date().toISOString(),
+        isOnDiet: true,
+      })
+      .expect(201)
+
+    await request(app.server)
+      .post('/meals')
+      .set('Cookie', cookie)
+      .send({
+        name: 'Ceia',
+        description: 'Shake de proteína',
+        date: new Date().toISOString(),
+        isOnDiet: true,
+      })
+      .expect(201)
+
+    const getMetricsResponse = await request(app.server)
+      .get('/meals/metrics')
+      .set('Cookie', cookie)
+      .expect(200)
+
+    expect(getMetricsResponse.body.metrics).toEqual(
+      expect.objectContaining({
+        totalMeals: 4,
+        totalMealsOnDiet: 3,
+        totalMealsOffDiet: 1,
+        bestOnDietSequence: 2,
+      })
+    )
+  })
 })

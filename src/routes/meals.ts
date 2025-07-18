@@ -88,9 +88,19 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
     const meal = await knex('meals').where('id', id).first()
 
+    const user = await knex('users')
+      .where('session_id', request.cookies.sessionId)
+      .first()
+
     if (!meal) {
       return reply.status(404).send({
         error: 'Meal not found',
+      })
+    }
+
+    if (meal.user_id !== user?.id) {
+      return reply.status(403).send({
+        error: 'Forbidden',
       })
     }
 
@@ -112,9 +122,62 @@ export const mealsRoutes = async (app: FastifyInstance) => {
     async (request, reply) => {
       const { id } = getMealParamsSchema.parse(request.params)
 
-      await knex('meals').where('id', id).first().delete()
+      const meal = await knex('meals').where('id', id).first()
+
+      const user = await knex('users')
+        .where('session_id', request.cookies.sessionId)
+        .first()
+
+      if (!meal) {
+        return reply.status(404).send({
+          error: 'Meal not found',
+        })
+      }
+
+      if (meal.user_id !== user?.id) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+        })
+      }
 
       return reply.status(204).send()
+    }
+  )
+
+  app.get(
+    '/metrics',
+    { preHandler: [checkSessionId] },
+    async (request, reply) => {
+      const user = await knex('users')
+        .where('session_id', request.cookies.sessionId)
+        .first()
+
+      const meals = await knex('meals').where('user_id', user?.id)
+
+      const totalMeals = meals.length
+      const totalMealsOnDiet = meals.filter(meal => meal.is_on_diet).length
+      const totalMealsOffDiet = meals.filter(meal => !meal.is_on_diet).length
+      const bestOnDietSequence = meals.reduce(
+        (acc, meal) => {
+          if (meal.is_on_diet) {
+            acc.currentSequence += 1
+            acc.bestSequence = Math.max(acc.currentSequence, acc.bestSequence)
+          } else {
+            acc.currentSequence = 0
+          }
+          return acc
+        },
+        { currentSequence: 0, bestSequence: 0 }
+      ).bestSequence
+
+      return reply.status(200).send({
+        metrics: {
+          totalMeals,
+          totalMealsOnDiet,
+          totalMealsOffDiet,
+          bestOnDietSequence,
+        },
+      })
     }
   )
 }
