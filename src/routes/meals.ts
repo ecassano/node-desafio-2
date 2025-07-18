@@ -105,4 +105,16 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
     return reply.status(204).send()
   })
+
+  app.delete(
+    '/:id',
+    { preHandler: [checkSessionId] },
+    async (request, reply) => {
+      const { id } = getMealParamsSchema.parse(request.params)
+
+      await knex('meals').where('id', id).first().delete()
+
+      return reply.status(204).send()
+    }
+  )
 }
