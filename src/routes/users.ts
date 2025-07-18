@@ -1,13 +1,7 @@
 import { knex } from '../database'
-import { z } from 'zod'
 import { FastifyInstance } from 'fastify'
 import { randomUUID } from 'node:crypto'
-import { checkSessionId } from '../middlewares/check-session-id'
-
-const createUserBodySchema = z.object({
-  name: z.string(),
-  email: z.email(),
-})
+import { createUserBodySchema } from '../utils/schemas'
 
 export const userRoutes = async (app: FastifyInstance) => {
   app.addHook('preHandler', async (request, reply) => {
@@ -22,21 +16,15 @@ export const userRoutes = async (app: FastifyInstance) => {
       .first()
       .then(user => !!user)
 
-    console.log(userAlreadyExists)
-
     if (userAlreadyExists) {
       return reply.status(400).send({ message: 'User already exists' })
     }
 
-    let sessionId = request.cookies.sessionId
-
-    if (!sessionId) {
-      sessionId = randomUUID()
-      reply.cookie('sessionId', sessionId, {
-        path: '/',
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-      })
-    }
+    const sessionId = randomUUID()
+    reply.cookie('sessionId', sessionId, {
+      path: '/',
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    })
 
     await knex('users').insert({
       id: randomUUID(),

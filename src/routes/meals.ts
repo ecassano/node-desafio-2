@@ -1,15 +1,8 @@
 import { FastifyInstance } from 'fastify'
 import { knex } from '../database'
-import { z } from 'zod'
 import { randomUUID } from 'node:crypto'
 import { checkSessionId } from '../middlewares/check-session-id'
-
-const createMealBodySchema = z.object({
-  name: z.string(),
-  description: z.string(),
-  date: z.coerce.date(),
-  isOnDiet: z.boolean(),
-})
+import { createMealBodySchema, mealSchema } from '../utils/schemas'
 
 export const mealsRoutes = async (app: FastifyInstance) => {
   app.addHook('preHandler', async (request, reply) => {
@@ -42,6 +35,18 @@ export const mealsRoutes = async (app: FastifyInstance) => {
 
     return reply.status(201).send({
       message: 'Meal created successfully',
+    })
+  })
+
+  app.get('/', { preHandler: [checkSessionId] }, async (request, reply) => {
+    const user = await knex('users')
+      .where('session_id', request.cookies.sessionId)
+      .first()
+
+    const meals = await knex('meals').where('user_id', user?.id)
+
+    return reply.status(200).send({
+      meals: meals.map(meal => mealSchema.parse(meal)),
     })
   })
 }
