@@ -6,6 +6,7 @@ import {
   createMealBodySchema,
   getMealParamsSchema,
   mealSchema,
+  updateMealBodySchema,
 } from '../utils/schemas'
 
 export const mealsRoutes = async (app: FastifyInstance) => {
@@ -76,5 +77,32 @@ export const mealsRoutes = async (app: FastifyInstance) => {
     }
 
     return reply.status(200).send({ meal: mealSchema.parse(meal) })
+  })
+
+  app.put('/:id', { preHandler: [checkSessionId] }, async (request, reply) => {
+    const { id } = getMealParamsSchema.parse(request.params)
+
+    const { name, description, date, isOnDiet } = updateMealBodySchema.parse(
+      request.body
+    )
+
+    const meal = await knex('meals').where('id', id).first()
+
+    if (!meal) {
+      return reply.status(404).send({
+        error: 'Meal not found',
+      })
+    }
+
+    await knex('meals')
+      .where('id', id)
+      .update({
+        name: name ?? meal.name,
+        description: description ?? meal.description,
+        date: date ?? meal.date,
+        is_on_diet: isOnDiet ?? meal.is_on_diet,
+      })
+
+    return reply.status(204).send()
   })
 }

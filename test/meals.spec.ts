@@ -140,4 +140,59 @@ describe('Meals routes', () => {
       })
     )
   })
+
+  it('should be able to update a meal from a user', async () => {
+    const createUserResponse = await request(app.server)
+      .post('/users')
+      .send({
+        name: 'John Doe',
+        email: 'johndoe@example.com',
+      })
+      .expect(201)
+
+    const cookie = createUserResponse.get('Set-Cookie')!
+
+    await request(app.server)
+      .post('/meals')
+      .set('Cookie', cookie)
+      .send({
+        name: 'Café da manhã',
+        description: 'Ovos e frutas',
+        date: new Date().toISOString(),
+        isOnDiet: true,
+      })
+      .expect(201)
+
+    const listUserMealsResponse = await request(app.server)
+      .get('/meals')
+      .set('Cookie', cookie)
+      .expect(200)
+
+    const meal = listUserMealsResponse.body.meals[0]
+
+    await request(app.server)
+      .put(`/meals/${meal.id}`)
+      .set('Cookie', cookie)
+      .send({
+        name: 'Almoço',
+        description: 'Pastel de camarão',
+      })
+      .expect(204)
+
+    const getMealResponse = await request(app.server)
+      .get(`/meals/${meal.id}`)
+      .set('Cookie', cookie)
+      .expect(200)
+
+    expect(getMealResponse.body.meal).toEqual(
+      expect.objectContaining({
+        ...meal,
+        id: meal.id,
+        name: 'Almoço',
+        description: 'Pastel de camarão',
+        date: meal.date,
+        isOnDiet: meal.isOnDiet,
+      })
+    )
+  })
 })

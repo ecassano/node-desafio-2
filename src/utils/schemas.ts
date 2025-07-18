@@ -12,6 +12,13 @@ export const createMealBodySchema = z.object({
   isOnDiet: z.boolean(),
 })
 
+export const updateMealBodySchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+  date: z.coerce.date().optional(),
+  isOnDiet: z.boolean().optional(),
+})
+
 export const mealDBSchema = z.object({
   id: z.string(),
   name: z.string(),
