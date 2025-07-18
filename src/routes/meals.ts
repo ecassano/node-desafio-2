@@ -2,7 +2,11 @@ import { FastifyInstance } from 'fastify'
 import { knex } from '../database'
 import { randomUUID } from 'node:crypto'
 import { checkSessionId } from '../middlewares/check-session-id'
-import { createMealBodySchema, mealSchema } from '../utils/schemas'
+import {
+  createMealBodySchema,
+  getMealParamsSchema,
+  mealSchema,
+} from '../utils/schemas'
 
 export const mealsRoutes = async (app: FastifyInstance) => {
   app.addHook('preHandler', async (request, reply) => {
@@ -48,5 +52,29 @@ export const mealsRoutes = async (app: FastifyInstance) => {
     return reply.status(200).send({
       meals: meals.map(meal => mealSchema.parse(meal)),
     })
+  })
+
+  app.get('/:id', { preHandler: [checkSessionId] }, async (request, reply) => {
+    const { id } = getMealParamsSchema.parse(request.params)
+
+    const meal = await knex('meals').where('id', id).first()
+
+    const user = await knex('users')
+      .where('session_id', request.cookies.sessionId)
+      .first()
+
+    if (!meal) {
+      return reply.status(404).send({
+        error: 'Meal not found',
+      })
+    }
+
+    if (meal.user_id !== user?.id) {
+      return reply.status(403).send({
+        error: 'Forbidden',
+      })
+    }
+
+    return reply.status(200).send({ meal: mealSchema.parse(meal) })
   })
 }

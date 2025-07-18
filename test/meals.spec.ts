@@ -94,4 +94,50 @@ describe('Meals routes', () => {
       }),
     ])
   })
+
+  it('should be able to get a meal from a user', async () => {
+    const createUserResponse = await request(app.server)
+      .post('/users')
+      .send({
+        name: 'John Doe',
+        email: 'johndoe@example.com',
+      })
+      .expect(201)
+
+    const cookie = createUserResponse.get('Set-Cookie')!
+    const fixedDate = new Date().toISOString()
+
+    await request(app.server)
+      .post('/meals')
+      .set('Cookie', cookie)
+      .send({
+        name: 'Café da manhã',
+        description: 'Ovos e frutas',
+        date: fixedDate,
+        isOnDiet: true,
+      })
+      .expect(201)
+
+    const listUserMealsResponse = await request(app.server)
+      .get('/meals')
+      .set('Cookie', cookie)
+      .expect(200)
+
+    const mealId = listUserMealsResponse.body.meals[0].id
+
+    const getMealResponse = await request(app.server)
+      .get(`/meals/${mealId}`)
+      .set('Cookie', cookie)
+      .expect(200)
+
+    expect(getMealResponse.body.meal).toEqual(
+      expect.objectContaining({
+        id: mealId,
+        name: 'Café da manhã',
+        description: 'Ovos e frutas',
+        date: fixedDate,
+        isOnDiet: true,
+      })
+    )
+  })
 })
